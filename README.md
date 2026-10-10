@@ -27,7 +27,6 @@ provider "yandex" {
   zone      = "ru-central1-e"
 }
 
-# 1. Создаем сеть и подсеть
 resource "yandex_vpc_network" "my_network" {
   name = "hw-network"
 }
@@ -39,7 +38,6 @@ resource "yandex_vpc_subnet" "my_subnet" {
   v4_cidr_blocks = ["192.168.10.0/24"]
 }
 
-# 2. Создаем 2 идентичные виртуальные машины
 resource "yandex_compute_instance" "web" {
   count       = 2
   name        = "web-server-${count.index + 1}"
@@ -80,7 +78,6 @@ resource "yandex_compute_instance" "web" {
   }
 }
 
-# 3. Создаем таргет-группу
 resource "yandex_lb_target_group" "my_target_group" {
   name = "hw-target-group"
 
@@ -95,7 +92,6 @@ resource "yandex_lb_target_group" "my_target_group" {
   }
 }
 
-# 4. Создаем балансировщик нагрузки
 resource "yandex_lb_network_load_balancer" "my_lb" {
   name = "hw-load-balancer"
 
@@ -119,7 +115,6 @@ resource "yandex_lb_network_load_balancer" "my_lb" {
   }
 }
 
-# 5. Вывод IP балансировщика
 output "load_balancer_ip" {
   value = yandex_lb_network_load_balancer.my_lb.listener.*.external_address_spec[0].*.address
 }
