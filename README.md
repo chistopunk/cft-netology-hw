@@ -21,7 +21,7 @@ terraform {
 }
 
 provider "yandex" {
-  token     = "ТВОЙ_ТОКЕН"
+  token     = "Безопасность, сами понимаете"
   cloud_id  = "b1gkjakgtanqejlkpmqd"
   folder_id = "b1g1jhiv5jpbhu7vs7h7"
   zone      = "ru-central1-e"
