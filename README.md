@@ -63,7 +63,7 @@ sudo systemctl enable --now elasticsearch
 curl -X GET 'localhost:9200/_cluster/health?pretty'
 ```
 
-![Задание 1](<img width="2560" height="1589" alt="telegram-cloud-photo-size-2-5418359612416664796-w" src="https://github.com/user-attachments/assets/4c79ac3a-a1b9-4fcd-82ec-deff4ada4556" />
+(<img width="2560" height="1589" alt="telegram-cloud-photo-size-2-5418359612416664796-w" src="https://github.com/user-attachments/assets/4c79ac3a-a1b9-4fcd-82ec-deff4ada4556" />
 )
 
 ---
