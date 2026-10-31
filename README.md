@@ -1,124 +1,221 @@
-# Домашнее задание к занятию "`Отказоустойчивость в облаке`" - `Чередниченко Владислав`
+# Домашнее задание к занятию «ELK» — Чередниченко Владислав
 
-### Задание 1
+## Стенд
 
-В ходе выполнения задания была подготовлена инфраструктура в Yandex Cloud с помощью Terraform: развернуты две виртуальные машины с веб-сервером Nginx, объединенные в целевую группу, и настроен сетевой балансировщик нагрузки.
+- ВМ: Debian 13, 2 vCPU, 8 ГБ RAM, IP `192.168.88.183`
+- Elastic Stack **8.19.23** (Elasticsearch, Kibana, Logstash, Filebeat), nginx 1.26.3
+- Один узел (single-node). Встроенная безопасность (TLS и авторизация) отключена, потому что стенд учебный и Elasticsearch слушает только `localhost`.
 
-1. Установлена утилита `yc`, получен токен для авторизации Terraform в Yandex Cloud. Установлен Terraform.
-2. Подготовлен конфигурационный файл `main.tf`, описывающий создание VPC, подсети, виртуальных машин, целевой группы и сетевого балансировщика.
-3. Для создания идентичных ВМ использован аргумент `count = 2`. Настройка Nginx выполнена автоматически при запуске машин с помощью cloud-init (через блок `user-data`).
-4. Для обхода ограничений квот нового аккаунта применены настройки: платформа `standard-v3`, `core_fraction = 20` и политика прерываемости (`preemptible = true`).
-5. Выполнено развертывание инфраструктуры командами `terraform init` и `terraform apply`.
-6. Выполнена проверка работоспособности: балансировщик активен, хосты в статусе healthy, при обращении по внешнему IP открывается дефолтная страница Nginx.
+### Подготовка: подключение репозитория Elastic
 
-``` hcl
-terraform {
-  required_providers {
-    yandex = {
-      source = "yandex-cloud/yandex"
-    }
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y curl gnupg ca-certificates
+
+curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg
+
+# зеркало Яндекса (официальный адрес: https://artifacts.elastic.co/packages/8.x/apt)
+echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://mirror.yandex.ru/mirrors/elastic/8/ stable main" | sudo tee /etc/apt/sources.list.d/elastic-8.x.list
+
+sudo apt update
+```
+
+---
+
+### Задание 1. Elasticsearch
+
+> Установите и запустите Elasticsearch, после чего поменяйте параметр cluster_name на случайный.
+> Приведите скриншот команды `curl -X GET 'localhost:9200/_cluster/health?pretty'`, сделанной на сервере с установленным Elasticsearch. Где будет виден нестандартный cluster_name.
+
+#### Решение
+
+1. Установка:
+
+```bash
+sudo apt install -y elasticsearch
+```
+
+2. Изменения в `/etc/elasticsearch/elasticsearch.yml`. Имя кластера сгенерировано случайно, API доступен только локально, security отключён, чтобы запрос из задания выполнялся без авторизации:
+
+```yaml
+cluster.name: cluster-ro5w80qs
+
+http.host: 127.0.0.1
+
+xpack.security.enabled: false
+xpack.security.enrollment.enabled: false
+xpack.security.http.ssl:
+  enabled: false
+```
+
+3. Ограничение памяти JVM в `/etc/elasticsearch/jvm.options.d/heap.options`:
+
+```
+-Xms2g
+-Xmx2g
+```
+
+4. Запуск и проверка:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now elasticsearch
+curl -X GET 'localhost:9200/_cluster/health?pretty'
+```
+
+![Задание 1](<img width="2560" height="1589" alt="telegram-cloud-photo-size-2-5418359612416664796-w" src="https://github.com/user-attachments/assets/4c79ac3a-a1b9-4fcd-82ec-deff4ada4556" />
+)
+
+---
+
+### Задание 2. Kibana
+
+> Установите и запустите Kibana.
+> Приведите скриншот интерфейса Kibana на странице `http://<ip вашего сервера>:5601/app/dev_tools#/console`, где будет выполнен запрос `GET /_cluster/health?pretty`.
+
+#### Решение
+
+1. Установка:
+
+```bash
+sudo apt install -y kibana
+```
+
+2. Изменения в `/etc/kibana/kibana.yml`:
+
+```yaml
+server.host: "0.0.0.0"
+elasticsearch.hosts: ["http://localhost:9200"]
+```
+
+3. Запуск:
+
+```bash
+sudo systemctl enable --now kibana
+```
+
+4. В браузере открыта страница `http://192.168.88.183:5601/app/dev_tools#/console` и выполнен запрос `GET /_cluster/health?pretty`.
+
+![Задание 2](<img width="2560" height="1675" alt="telegram-cloud-photo-size-2-5418359612416664817-w" src="https://github.com/user-attachments/assets/c4420747-740e-48ad-9784-9d26c4375d97" />
+)
+
+---
+
+### Задание 3. Logstash
+
+> Установите и запустите Logstash и Nginx. С помощью Logstash отправьте access-лог Nginx в Elasticsearch.
+> Приведите скриншот интерфейса Kibana, на котором видны логи Nginx.
+
+#### Решение
+
+1. Установка nginx и генерация трафика:
+
+```bash
+sudo apt install -y nginx
+for i in $(seq 1 10); do curl -s -o /dev/null localhost/; done
+curl -s -o /dev/null localhost/nonexistent
+```
+
+2. Установка Logstash. Пользователь `logstash` добавлен в группу `adm`, чтобы у него было право читать `/var/log/nginx/access.log`:
+
+```bash
+sudo apt install -y logstash
+sudo usermod -aG adm logstash
+```
+
+3. Пайплайн `/etc/logstash/conf.d/nginx.conf`:
+
+```ruby
+input {
+  file {
+    path => "/var/log/nginx/access.log"
+    start_position => "beginning"
+    sincedb_path => "/var/lib/logstash/sincedb_nginx"
   }
 }
 
-provider "yandex" {
-  token     = "Безопасность, сами понимаете"
-  cloud_id  = "b1gkjakgtanqejlkpmqd"
-  folder_id = "b1g1jhiv5jpbhu7vs7h7"
-  zone      = "ru-central1-e"
-}
-
-resource "yandex_vpc_network" "my_network" {
-  name = "hw-network"
-}
-
-resource "yandex_vpc_subnet" "my_subnet" {
-  name           = "hw-subnet"
-  zone           = "ru-central1-e"
-  network_id     = yandex_vpc_network.my_network.id
-  v4_cidr_blocks = ["192.168.10.0/24"]
-}
-
-resource "yandex_compute_instance" "web" {
-  count       = 2
-  name        = "web-server-${count.index + 1}"
-  platform_id = "standard-v3"
-  
-  allow_stopping_for_update = true
-
-  resources {
-    cores         = 2
-    memory        = 2
-    core_fraction = 20
+filter {
+  grok {
+    match => { "message" => "%{COMBINEDAPACHELOG}" }
   }
-
-  scheduling_policy {
-    preemptible = true
-  }
-
-  boot_disk {
-    initialize_params {
-      # Образ Ubuntu 20.04
-      image_id = "fd8snjpoq85qqv0mk9gi" 
-    }
-  }
-
-  network_interface {
-    subnet_id = yandex_vpc_subnet.my_subnet.id
-    nat       = true 
-  }
-
-  metadata = {
-    user-data = <<-EOF
-      #!/bin/bash
-      apt-get update
-      apt-get install -y nginx
-      systemctl enable nginx
-      systemctl start nginx
-    EOF
+  date {
+    match => [ "timestamp", "dd/MMM/yyyy:HH:mm:ss Z" ]
   }
 }
 
-resource "yandex_lb_target_group" "my_target_group" {
-  name = "hw-target-group"
-
-  target {
-    subnet_id = yandex_vpc_subnet.my_subnet.id
-    address   = yandex_compute_instance.web[0].network_interface.0.ip_address
+output {
+  elasticsearch {
+    hosts => ["http://localhost:9200"]
+    index => "nginx-logstash-%{+YYYY.MM.dd}"
   }
-
-  target {
-    subnet_id = yandex_vpc_subnet.my_subnet.id
-    address   = yandex_compute_instance.web[1].network_interface.0.ip_address
-  }
-}
-
-resource "yandex_lb_network_load_balancer" "my_lb" {
-  name = "hw-load-balancer"
-
-  listener {
-    name = "http-listener"
-    port = 80
-    external_address_spec {
-      ip_version = "ipv4"
-    }
-  }
-
-  attached_target_group {
-    target_group_id = yandex_lb_target_group.my_target_group.id
-    healthcheck {
-      name = "http-healthcheck"
-      http_options {
-        port = 80
-        path = "/"
-      }
-    }
-  }
-}
-
-output "load_balancer_ip" {
-  value = yandex_lb_network_load_balancer.my_lb.listener.*.external_address_spec[0].*.address
 }
 ```
-<img width="1449" height="366" alt="task-1_nginx_page" src="https://github.com/user-attachments/assets/2ef50726-2608-4775-826f-2498c4101bd0" />
 
-<img width="633" height="1158" alt="task-1_balancer" src="https://github.com/user-attachments/assets/efd9aa2f-1589-463d-93ad-994aa6a05282" />
+4. Проверка конфигурации, запуск и проверка индекса:
+
+```bash
+sudo -u logstash /usr/share/logstash/bin/logstash --path.settings /etc/logstash -t
+sudo systemctl enable --now logstash
+curl 'localhost:9200/_cat/indices/nginx-*?v'
+```
+
+5. В Kibana создан Data View `nginx-logstash` (index pattern `nginx-logstash-*`, time field `@timestamp`). Логи открыты в Discover, в колонки вынесены поля, которые разобрал grok: `source.address`, `url.original`, `http.response.status_code`.
+
+![Задание 3](<img width="2560" height="1675" alt="telegram-cloud-photo-size-2-5418359612416664835-w" src="https://github.com/user-attachments/assets/6079c6a9-d3c2-49eb-a3b1-cb3a2953a7c7" />
+)
+
+---
+
+### Задание 4. Filebeat
+
+> Установите и запустите Filebeat. Переключите поставку логов Nginx с Logstash на Filebeat.
+> Приведите скриншот интерфейса Kibana, на котором видны логи Nginx, которые были отправлены через Filebeat.
+
+#### Решение
+
+1. Logstash остановлен и убран из автозапуска:
+
+```bash
+sudo systemctl disable --now logstash
+```
+
+2. Установка Filebeat:
+
+```bash
+sudo apt install -y filebeat
+```
+
+3. Конфигурация `/etc/filebeat/filebeat.yml`. Filebeat читает access-лог и отправляет его напрямую в Elasticsearch:
+
+```yaml
+filebeat.inputs:
+  - type: filestream
+    id: nginx-access
+    enabled: true
+    paths:
+      - /var/log/nginx/access.log
+
+output.elasticsearch:
+  hosts: ["http://localhost:9200"]
+```
+
+4. Проверка и запуск:
+
+```bash
+sudo filebeat test config
+sudo filebeat test output
+sudo systemctl enable --now filebeat
+```
+
+5. Сгенерированы «меченые» запросы, чтобы отличать записи, пришедшие после переключения:
+
+```bash
+for i in $(seq 1 5); do curl -s -o /dev/null localhost/filebeat-test; done
+```
+
+6. В Kibana создан Data View `filebeat` (index pattern `filebeat-*`, time field `@timestamp`). В Discover видно `agent.type: filebeat`, путь `/var/log/nginx/access.log` и строки nginx, в том числе запросы `/filebeat-test`.
+
+> Filebeat передаёт строку лога целиком в поле `message`, без разбора на поля. Поэтому в `@timestamp` записано время чтения строки, а не время из лога. В задании 3 время из лога извлекал фильтр `date` в Logstash.
+
+![Задание 4](<img width="2560" height="1675" alt="telegram-cloud-photo-size-2-5418359612416664855-w" src="https://github.com/user-attachments/assets/376ae1bc-991d-4431-ab0d-c6002ca89764" />
+)
