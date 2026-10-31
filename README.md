@@ -95,8 +95,7 @@ sudo systemctl enable --now kibana
 
 4. В браузере открыта страница `http://192.168.88.183:5601/app/dev_tools#/console` и выполнен запрос `GET /_cluster/health?pretty`.
 
-![Задание 2](<img width="2560" height="1675" alt="telegram-cloud-photo-size-2-5418359612416664817-w" src="https://github.com/user-attachments/assets/c4420747-740e-48ad-9784-9d26c4375d97" />
-)
+<img width="2560" height="1675" alt="telegram-cloud-photo-size-2-5418359612416664817-w" src="https://github.com/user-attachments/assets/c4420747-740e-48ad-9784-9d26c4375d97" />
 
 ---
 
@@ -160,8 +159,7 @@ curl 'localhost:9200/_cat/indices/nginx-*?v'
 
 5. В Kibana создан Data View `nginx-logstash` (index pattern `nginx-logstash-*`, time field `@timestamp`). Логи открыты в Discover, в колонки вынесены поля, которые разобрал grok: `source.address`, `url.original`, `http.response.status_code`.
 
-![Задание 3](<img width="2560" height="1675" alt="telegram-cloud-photo-size-2-5418359612416664835-w" src="https://github.com/user-attachments/assets/6079c6a9-d3c2-49eb-a3b1-cb3a2953a7c7" />
-)
+<img width="2560" height="1675" alt="telegram-cloud-photo-size-2-5418359612416664835-w" src="https://github.com/user-attachments/assets/6079c6a9-d3c2-49eb-a3b1-cb3a2953a7c7" />
 
 ---
 
@@ -216,5 +214,4 @@ for i in $(seq 1 5); do curl -s -o /dev/null localhost/filebeat-test; done
 
 > Filebeat передаёт строку лога целиком в поле `message`, без разбора на поля. Поэтому в `@timestamp` записано время чтения строки, а не время из лога. В задании 3 время из лога извлекал фильтр `date` в Logstash.
 
-![Задание 4](<img width="2560" height="1675" alt="telegram-cloud-photo-size-2-5418359612416664855-w" src="https://github.com/user-attachments/assets/376ae1bc-991d-4431-ab0d-c6002ca89764" />
-)
+<img width="2560" height="1675" alt="telegram-cloud-photo-size-2-5418359612416664855-w" src="https://github.com/user-attachments/assets/376ae1bc-991d-4431-ab0d-c6002ca89764" />
