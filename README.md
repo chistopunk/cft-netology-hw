@@ -240,7 +240,7 @@ sudo docker exec rabbitmq rabbitmqadmin -u admin -p '<PASSWORD>' get queue=netol
 `get` по умолчанию возвращает сообщение в очередь, поэтому на второй ноде оно отображается
 с флагом `redelivered = True`.
 
-<img width="2560" height="1658" alt="telegram-cloud-photo-size-2-5436405789389168959-w" src="https://github.com/user-attachments/assets/3f9fea40-efb7-4ec7-8cdd-f5429ffa32f0" />
+<img width="2560" height="1658" alt="telegram-cloud-photo-size-2-5436405789389168973-w" src="https://github.com/user-attachments/assets/cdca5f53-8317-4c6f-83d5-a594b6a229b3" />
 
 <img width="2560" height="1658" alt="telegram-cloud-photo-size-2-5436405789389168974-w" src="https://github.com/user-attachments/assets/7325aa4e-ef51-41bd-a729-b609d7c9697e" />
 
